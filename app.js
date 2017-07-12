@@ -1,57 +1,74 @@
 var express = require('express');
+var app = express();
 var path = require('path');
-var favicon = require('serve-favicon');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
+var config = require('./lib/config');
+var base58 = require('./lib/base58');
 
-var dbUrl = 'mongodb://localhost/urlshortener'
+// grab the url model
+var Url = require('./models/url');
 
-mongoose.connect(dbUrl, function(err, res){
-  if (err) {
-    console.log('DB CONNECTION FAILED:' + err)
-  } else{
-    console.log('DB CONNECTION SUCCESS:' + dbUrl)
-  }
-})
+mongoose.connect('mongodb://' + config.db.host + '/' + config.db.name);
 
-var index = require('./routes/index');
-var api = require('./routes/api');
-
-var app = express();
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'hjs');
-
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', index);
-app.use('/api', api);
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
+app.get('/', function(req, res){
+  res.sendFile(path.join(__dirname, 'views/index.html'));
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+app.post('/api/shrink', function(req, res){
+  var longUrl = req.body.url;
+  var shortUrl = '';
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+  // check if url already exists in database
+  Url.findOne({long_url: longUrl}, function (err, doc){
+    if (doc){
+      shortUrl = config.webhost + base58.encode(doc._id);
+
+      // the document exists, so we return it without creating a new entry
+      res.send({'shortUrl': shortUrl});
+    } else {
+      // since it doesn't exist, let's go ahead and create it:
+      var newUrl = Url({
+        long_url: longUrl
+      });
+
+      // save the new link
+      newUrl.save(function(err) {
+        if (err){
+          console.log(err);
+        }
+
+        shortUrl = config.webhost + base58.encode(newUrl._id);
+
+        res.send({'shortUrl': shortUrl});
+      });
+    }
+
+  });
+
 });
 
-module.exports = app;
+app.get('/:encoded_id', function(req, res){
+
+  var base58Id = req.params.encoded_id;
+
+  var id = base58.decode(base58Id);
+
+  // check if url already exists in database
+  Url.findOne({_id: id}, function (err, doc){
+    if (doc) {
+      res.redirect(doc.long_url);
+    } else {
+      res.redirect(config.webhost);
+    }
+  });
+
+});
+
+var server = app.listen(3000, function(){
+  console.log('Server listening on port 3000');
+});
