@@ -7,7 +7,6 @@ class App extends Component {
 
   constructor() {
     super();
-    $('#link').html("");
   }
   componentDidMount() {
     $('#link').html("");

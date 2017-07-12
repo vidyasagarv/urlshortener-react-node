@@ -20051,10 +20051,7 @@ var App = function (_Component) {
   function App() {
     _classCallCheck(this, App);
 
-    var _this = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this));
-
-    (0, _jquery2.default)('#link').html("");
-    return _this;
+    return _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this));
   }
 
   _createClass(App, [{
