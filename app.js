@@ -8,7 +8,7 @@ var base58 = require('./lib/base58');
 var port = process.env.PORT || 3000;
 
 // grab the url model
-var Url = require('./models/url');
+var Url = require('./models/Url');
 
 mongoose.connect('mongodb://' + config.db.host + '/' + config.db.name);
 
